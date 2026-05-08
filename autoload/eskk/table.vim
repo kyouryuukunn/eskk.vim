@@ -188,16 +188,13 @@ function! s:get_candidates(table, lhs_head, candidates) abort "{{{
   let matched_keys = filter(keys(data), '!stridx(v:val, a:lhs_head)')
 
   let removed_keys = []
-  let filtered_keys = []
   for key in matched_keys
     if get(data[key], 'method', '') ==# 'remove'
       call add(removed_keys, key)
-    else
-      call add(filtered_keys, key)
     endif
   endfor
 
-  call a:candidates.append(filtered_keys)
+  call a:candidates.append(matched_keys)
 
   " Search in base tables.
   if a:table.is_child()
