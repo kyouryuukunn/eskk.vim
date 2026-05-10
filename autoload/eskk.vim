@@ -769,17 +769,14 @@ function! s:do_sticky(stash) abort "{{{
 endfunction "}}}
 function! s:do_cancel(stash) abort "{{{
     let preedit = a:stash.preedit
-    if mode() ==# 'c'
-        call preedit.push_filter_pre_char("\<Esc>")
-    else
-        call preedit.set_henkan_phase(g:eskk#preedit#PHASE_NORMAL)
-        call preedit.clear_all()
-    endif
+    call preedit.set_henkan_phase(g:eskk#preedit#PHASE_NORMAL)
+    call preedit.clear_all()
 endfunction "}}}
 function! s:do_escape(stash) abort "{{{
     let preedit = a:stash.preedit
+    let phase = preedit.get_henkan_phase()
     call preedit.convert_rom_str_inplace(
-                \   preedit.get_henkan_phase()
+                \   phase
                 \)
 
     call s:dict_update_rank()
@@ -795,7 +792,15 @@ function! s:do_escape(stash) abort "{{{
                     \)
     endif
     let kakutei_str = preedit.get_display_str(0, with_rom_str)
-    call preedit.kakutei(kakutei_str . "\<Esc>")
+    if mode() ==# 'c' && (phase ==# g:eskk#preedit#PHASE_NORMAL)
+	    call eskk#disable()
+            call preedit.kakutei("\<C-c>")
+            return
+    endif
+    if mode() !=# 'c'
+	let kakutei_str .= "\<Esc>"
+    endif
+    call preedit.kakutei(kakutei_str)
 endfunction "}}}
 function! s:do_henkan(stash, ...) abort "{{{
     let preedit = a:stash.preedit
@@ -2215,7 +2220,9 @@ function! eskk#filter(char) abort "{{{
                 " We have to use i_CTRL-^ .
                 let str = eskk#get_preedit().rewrite()
                 let str .= preedit.generate_kakutei_str()
-                let str .= "\<C-^>"
+                if mode() ==# 'i' && str !~# '[\<Esc>\<C-c>\<C-g>]'
+                    let str .= "\<C-^>"
+                endif
                 return str
             endif
         endwhile
